@@ -10,6 +10,10 @@ namespace duckdb {
 	vector<OpenFileInfo> Glob(const string &path, FileOpener *opener) override;
 	bool FileExists(const string &filename, optional_ptr<FileOpener> opener = nullptr) override;
 	bool ListFiles(const string &directory, const std::function<void(const string &, bool)> &callback, FileOpener *opener) override;
+	int64_t GetFileSize(FileHandle &handle) override;
+	bool OnDiskFile(FileHandle &handle) override {
+                return false;
+        }
 	string GetName() const override {
 	    return "CompressionFileSystem";
 	}

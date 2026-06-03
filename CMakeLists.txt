@@ -11,7 +11,8 @@ include_directories(src/include)
 
 set(EXTENSION_SOURCES
     src/compression_extension.cpp
-    src/compression_filesystem.cpp)
+    src/compression_filesystem.cpp
+    src/bzip_filehandle.cpp)
 
 # yyjson headers bundled in DuckDB submodule
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/duckdb/third_party/yyjson/include)
