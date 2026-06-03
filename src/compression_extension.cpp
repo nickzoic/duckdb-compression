@@ -3,6 +3,7 @@
 #include "compression_extension.hpp"
 #include "bzip_filesystem.hpp"
 #include "lzma_filesystem.hpp"
+#include "lz4_filesystem.hpp"
 #include "duckdb.hpp"
 
 namespace duckdb {
@@ -12,6 +13,7 @@ namespace duckdb {
         auto &db_fs = db.GetFileSystem();
         db_fs.RegisterSubSystem(make_uniq<BzipFileSystem>());
         db_fs.RegisterSubSystem(make_uniq<LzmaFileSystem>());
+        db_fs.RegisterSubSystem(make_uniq<Lz4FileSystem>());
     }
 
     void CompressionExtension::Load(ExtensionLoader &loader) {

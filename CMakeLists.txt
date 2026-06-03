@@ -7,6 +7,7 @@ find_package(BZip2 REQUIRED)
 find_package(LibLZMA REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(lz4 REQUIRED IMPORTED_TARGET liblz4)
+pkg_check_modules(zstd REQUIRED IMPORTED_TARGET libzstd)
 
 set(EXTENSION_NAME ${TARGET_NAME}_extension)
 set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
@@ -17,13 +18,14 @@ include_directories(src/include ${LIBLZMA_INCLUDE_DIRS})
 set(EXTENSION_SOURCES
     src/compression_extension.cpp
     src/bzip_filesystem.cpp
-    src/lzma_filesystem.cpp)
+    src/lzma_filesystem.cpp
+    src/lz4_filesystem.cpp)
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})
 
-target_link_libraries(${EXTENSION_NAME} BZip2::BZip2 LibLZMA::LibLZMA PkgConfig::lz4)
-target_link_libraries(${LOADABLE_EXTENSION_NAME} BZip2::BZip2 LibLZMA::LibLZMA PkgConfig::lz4)
+target_link_libraries(${EXTENSION_NAME} BZip2::BZip2 LibLZMA::LibLZMA PkgConfig::lz4 PkgConfig::zstd)
+target_link_libraries(${LOADABLE_EXTENSION_NAME} BZip2::BZip2 LibLZMA::LibLZMA PkgConfig::lz4 PkgConfig::zstd)
 
 install(
   TARGETS ${EXTENSION_NAME}
