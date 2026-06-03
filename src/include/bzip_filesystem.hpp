@@ -13,15 +13,12 @@ namespace duckdb {
     struct BzipFileHandle : public FileHandle {
         public:
             BzipFileHandle(FileSystem &fs, const string &path, FileOpenFlags flags);
-            virtual void Close() override;
-	    virtual int64_t Read(void *buffer, idx_t nr_bytes);
-            virtual int64_t Read(QueryContext context, void *buffer, idx_t nr_bytes);
-            virtual void Read(void *buffer, idx_t nr_bytes, idx_t location);
-            virtual void Read(QueryContext context, void *buffer, idx_t nr_bytes, idx_t location);
-	private:
+	    void Close() override;
+
 	    FILE *filePtr;
 	    BZFILE *bzFile;
-
+	    bool finished = false;
+	    bool writing = false;
     };
 
     class BzipFileSystem : public FileSystem {
@@ -29,6 +26,7 @@ namespace duckdb {
 	vector<OpenFileInfo> Glob(const string &path, FileOpener *opener) override;
 	bool FileExists(const string &filename, optional_ptr<FileOpener> opener = nullptr) override;
 	bool ListFiles(const string &directory, const std::function<void(const string &, bool)> &callback, FileOpener *opener) override;
+	void MoveFile(const string &source, const string &target, optional_ptr<FileOpener> opener = nullptr) override;
 	int64_t GetFileSize(FileHandle &handle) override;
 	bool OnDiskFile(FileHandle &handle) override {
                 return false;
@@ -44,8 +42,8 @@ namespace duckdb {
         }
 	unique_ptr<FileHandle> OpenFile(const string &path, FileOpenFlags flags,
                                         optional_ptr<FileOpener> opener = nullptr) override;
-	void Read(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) override;
         int64_t Read(FileHandle &handle, void *buffer, int64_t nr_bytes) override;
+        int64_t Write(FileHandle &handle, void *buffer, int64_t nr_bytes) override;
 
     };
 }
