@@ -17,7 +17,8 @@ include_directories(src/include ${LIBLZMA_INCLUDE_DIRS})
 set(EXTENSION_SOURCES
     src/compression_extension.cpp
     src/compression_filesystem.cpp
-    src/bzip_filehandle.cpp)
+    src/bzip_filehandle.cpp
+    src/lzma_filehandle.cpp)
 
 build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES})
