@@ -39,6 +39,26 @@ cd duckdb-compression
 GEN=ninja make -j$(nproc)
 ```
 
+## TODO
+
+At the moment this is more like a proof of concept than "production ready"
+so feel free to join in the effort.  For example:
+
+* More compression formats.
+* Tests, error handling.
+* I only implement `int64_t Read(FileHandle &, void*, int64_t)` not any
+  of the other `Read` methods, this is probably bad.
+* There's a bunch of other methods I haven't looked at, including `Reset`,
+  `OnDiskFile`, etc.
+* Reading individual files out of ZIP archives, eg: `/path/zipfile.zip/filename.csv`
+* It should be possible to use multiple extensions together to load eg:
+  `https://example.com/whatever.csv.bz2` but this would require a different
+  approach to opening the files which I don't understand at this time ...
+  `RegisterSubSystem`?
+  * Is it possible to read something like `zipfile.zip/filename.csv.bz2`, 
+  putting a .bz2 inside a .zip is silly but people do do it.
+  * Or for triple points, `https:/example.com/path/zipfile.zip/filename.csv.bz2`.
+
 ## Author
 
 [Nick Moore](https://nick.zoic.org/) <nick@zoic.org> 
