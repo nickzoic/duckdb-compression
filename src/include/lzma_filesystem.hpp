@@ -1,11 +1,25 @@
-#pragma once
-
 #include "duckdb/common/file_system.hpp"
-#include "duckdb/common/http_util.hpp"
-#include "duckdb/common/multi_file/multi_file_list.hpp"
+#include "duckdb/main/query_context.hpp"
+
+#include <lzma.h>
+#include <iostream>
 
 namespace duckdb {
-    class CompressionFileSystem : public FileSystem {
+
+    struct LzmaFileHandle : public FileHandle {
+        public:
+            LzmaFileHandle(FileSystem &fs, const string &path, FileOpenFlags flags);
+            void Close() override;
+	    int64_t Read(void *buffer, idx_t nr_bytes);
+            int64_t Read(QueryContext context, void *buffer, idx_t nr_bytes);
+            void Read(void *buffer, idx_t nr_bytes, idx_t location);
+            void Read(QueryContext context, void *buffer, idx_t nr_bytes, idx_t location);
+
+	private:
+	    std::vector<uint8_t> buffer;
+    };
+
+    class LzmaFileSystem : public FileSystem {
         bool CanHandleFile(const string &fpath) override;
 	vector<OpenFileInfo> Glob(const string &path, FileOpener *opener) override;
 	bool FileExists(const string &filename, optional_ptr<FileOpener> opener = nullptr) override;
@@ -15,7 +29,7 @@ namespace duckdb {
                 return false;
         }
 	string GetName() const override {
-	    return "CompressionFileSystem";
+	    return "LzmaFileSystem";
 	}
 	bool CanSeek() override {
 	    return false;

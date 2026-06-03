@@ -1,7 +1,8 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "compression_extension.hpp"
-#include "compression_filesystem.hpp"
+#include "bzip_filesystem.hpp"
+#include "lzma_filesystem.hpp"
 #include "duckdb.hpp"
 
 namespace duckdb {
@@ -9,7 +10,8 @@ namespace duckdb {
     static void LoadInternal(ExtensionLoader &loader) {
         auto &db = loader.GetDatabaseInstance();
         auto &db_fs = db.GetFileSystem();
-        db_fs.RegisterSubSystem(make_uniq<CompressionFileSystem>());
+        db_fs.RegisterSubSystem(make_uniq<BzipFileSystem>());
+        db_fs.RegisterSubSystem(make_uniq<LzmaFileSystem>());
     }
 
     void CompressionExtension::Load(ExtensionLoader &loader) {
