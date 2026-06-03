@@ -36,6 +36,7 @@ namespace duckdb {
 	return false;
     }
     int64_t CompressionFileSystem::GetFileSize(FileHandle &handle) {
+	std::cout << "CompressionFileSystem::GetFileSize\n";
 	return 0;
     }
 
@@ -52,11 +53,14 @@ namespace duckdb {
 
     void CompressionFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
 	auto &fh = handle.Cast<BzipFileHandle>();
+	std::cout << "CompressionFileSystem::Read 1\n";
+	return fh.Read(buffer, nr_bytes, location);
     }
 
     int64_t CompressionFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes) {
 	auto &fh = handle.Cast<BzipFileHandle>();
-	return 0;
+	std::cout << "CompressionFileSystem::Read 2\n";
+	return fh.Read(buffer, nr_bytes);
     }
 
 }
