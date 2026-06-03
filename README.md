@@ -6,3 +6,12 @@ A [DuckDB](https://duckdb.org/) extension to allow `read_csv` to open
 See [#12232](https://github.com/duckdb/duckdb/discussions/12232)
 
 Based on [duckdb-gh](https://github.com/carlopi/duckdb-gh).
+
+
+## Building
+
+```
+git clone --recurse-submodules https://github.com/nickzoic/duckdb-compression.git
+cd duckdb-compression
+GEN=ninja make -j$(nproc)
+```
