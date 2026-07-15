@@ -1,5 +1,4 @@
 #include "duckdb/common/file_system.hpp"
-#include "duckdb/main/query_context.hpp"
 
 #include <lzma.h>
 #include <iostream>

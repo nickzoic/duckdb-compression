@@ -3,7 +3,6 @@
 #include "duckdb/common/file_system.hpp"
 #include "duckdb/common/http_util.hpp"
 #include "duckdb/common/multi_file/multi_file_list.hpp"
-#include "duckdb/main/query_context.hpp"
 
 #include <lz4frame.h>
 #include <iostream>
