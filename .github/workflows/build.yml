@@ -25,6 +25,9 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v6
 
+      - name: Submodule Update
+        run: git submodule update --init --recursive
+
       - name: Install ninja & libraries
         run: sudo apt install ninja-build libbz2-dev liblzma-dev liblz4-dev libzstd-dev
 
