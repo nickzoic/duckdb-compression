@@ -2,8 +2,7 @@
         "dependencies": [
                 "bzip2",
 		"liblzma",
-		"lz4",
-		"zstd"
+		"lz4"
         ],
         "vcpkg-configuration": {
                 "overlay-ports": [

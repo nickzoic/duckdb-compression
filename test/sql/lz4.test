@@ -1,0 +1,11 @@
+# name: test/sql/lz4.test
+# description: test lz4 compression
+# group: [sql]
+
+# Load extension
+require compression
+
+query I
+SELECT COUNT(*) FROM READ_CSV("test/files/output.csv.lz4");
+----
+282

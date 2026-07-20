@@ -12,6 +12,9 @@ Based on [duckdb-gh](https://github.com/carlopi/duckdb-gh) and
 [cozip\_reader](https://github.com/asterisk-labs/cozip_reader),
 thanks to Carlo and Cesar for putting their work out there.
 
+Note that reading and writing ZSTD `.zst` files are already covered by the
+[parquet extension](https://duckdb.org/docs/lts/data/parquet/overview)
+
 ## Features
 
 Currently implemented:
@@ -19,21 +22,19 @@ Currently implemented:
 | Format | Extension(s) | Reading | Writing | 
 |---|---|---|---|
 | BZ2 | .bz2 | &check; | &check; |
-| LZMA | .lzma, .xz | - | - |
 | LZ4 | .lz4 | &check; | &check; |
-| ZSTD | .zst | - | - |
+| LZMA | .lzma, .xz | - | - |
 
 Required library packages (Ubuntu):
 
 * libbz2-dev
 * liblzma-dev
 * liblz4-dev
-* libzstd-dev
 
 ## Building
 
 ```
-sudo apt install libbz2-dev liblzma-dev liblz4-dev libzstd-dev
+sudo apt install libbz2-dev liblzma-dev liblz4-dev
 git clone --recurse-submodules https://github.com/nickzoic/duckdb-compression.git
 cd duckdb-compression
 GEN=ninja make -j$(nproc)

@@ -1,0 +1,11 @@
+# name: test/sql/bz2.test
+# description: test bz2 compression
+# group: [sql]
+
+# Load extension
+require compression
+
+query I
+SELECT COUNT(*) FROM READ_CSV("test/files/output.csv.bz2");
+----
+282
