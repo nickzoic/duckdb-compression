@@ -34,6 +34,8 @@ namespace duckdb {
 	     if (!filePtr) {
 	         throw IOException(strerror(errno));
 	     }
+	     LZ4F_createDecompressionContext(&lz4f_dctx, LZ4F_VERSION);
+	     reading = true;
 	 } else {
 	     // XXX should check flags more thoroughly
 	     throw IOException("Unknown flags value");
@@ -42,6 +44,7 @@ namespace duckdb {
 
     void Lz4FileHandle::Close() {
 	 LZ4F_freeCompressionContext(lz4f_cctx);
+	 LZ4F_freeDecompressionContext(lz4f_dctx);
 	 fclose(filePtr);
     }
 
@@ -81,7 +84,35 @@ namespace duckdb {
 
     int64_t Lz4FileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes) {
 	auto &fh = handle.Cast<Lz4FileHandle>();
-	throw IOException("not implemented");
+
+	size_t dstSize;
+
+	// LZ4F_decompress *can* decode zero bytes sometimes, which duckdb will interpret as end of file,
+	// so this loop just calls it again until it does produce some bytes or we actually hit EOF.
+	while (!feof(fh.filePtr)) {
+	    if (fh.srcOffset >= fh.srcLength) {
+	        fh.srcBuffer.resize(fh.readSize);
+	        fh.srcLength = fread(fh.srcBuffer.data(), 1, fh.srcBuffer.size(), fh.filePtr);
+	        if (ferror(fh.filePtr)) throw IOException("read failed");
+	        if (fh.srcLength == 0) break;
+	        fh.srcOffset = 0;
+	    }
+    
+	    // srcSize and dstSize are both inputs (bytes to read / bytes to write) and outputs (bytes actually read / bytes written)
+	    // ret, if not an error and non zero, is a hint as to how big our next read should be.
+	    size_t srcSize = fh.srcLength - fh.srcOffset;
+	    size_t dstSize = nr_bytes;
+	    size_t ret = LZ4F_decompress(fh.lz4f_dctx, buffer, &dstSize, fh.srcBuffer.data() + fh.srcOffset, &srcSize, NULL);
+
+            if (LZ4F_isError(ret)) {
+                throw IOException(LZ4F_getErrorName(ret));
+	    } else if (ret > 0) {
+	        fh.readSize = ret;
+	    }
+	    fh.srcOffset += srcSize;
+	    if (dstSize > 0) return dstSize;
+	}
+	return 0;
     }
 
     int64_t Lz4FileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes) {

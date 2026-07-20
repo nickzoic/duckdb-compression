@@ -20,7 +20,7 @@ Currently implemented:
 |---|---|---|---|
 | BZ2 | .bz2 | &check; | &check; |
 | LZMA | .lzma, .xz | - | - |
-| LZ4 | .lz4 | - | &check; |
+| LZ4 | .lz4 | &check; | &check; |
 | ZSTD | .zst | - | - |
 
 Required library packages (Ubuntu):

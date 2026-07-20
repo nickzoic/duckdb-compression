@@ -4,6 +4,9 @@
 #include "duckdb/common/http_util.hpp"
 #include "duckdb/common/multi_file/multi_file_list.hpp"
 
+#include <cstdlib>
+#include <cstring>
+
 #include <lz4frame.h>
 #include <iostream>
 
@@ -16,8 +19,15 @@ namespace duckdb {
 
 	    FILE *filePtr;
 	    LZ4F_cctx *lz4f_cctx;
+	    LZ4F_dctx *lz4f_dctx;
 	    bool finished = false;
 	    bool writing = false;
+	    bool reading = false;
+	    size_t readSize = 65536;
+	    size_t srcOffset = 0;
+	    size_t srcLength = 0;
+	    std::vector<uint8_t>srcBuffer = {};
+
     };
 
     class Lz4FileSystem : public FileSystem {
