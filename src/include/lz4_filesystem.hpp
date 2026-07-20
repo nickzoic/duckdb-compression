@@ -12,47 +12,42 @@
 
 namespace duckdb {
 
-    struct Lz4FileHandle : public FileHandle {
-        public:
-            Lz4FileHandle(FileSystem &fs, const string &path, FileOpenFlags flags);
-	    void Close() override;
+struct Lz4FileHandle : public FileHandle {
+public:
+  Lz4FileHandle(FileSystem &fs, const string &path, FileOpenFlags flags);
+  void Close() override;
 
-	    FILE *filePtr;
-	    LZ4F_cctx *lz4f_cctx;
-	    LZ4F_dctx *lz4f_dctx;
-	    bool finished = false;
-	    bool writing = false;
-	    bool reading = false;
-	    size_t readSize = 65536;
-	    size_t srcOffset = 0;
-	    size_t srcLength = 0;
-	    std::vector<uint8_t>srcBuffer = {};
+  FILE *filePtr;
+  LZ4F_cctx *lz4f_cctx;
+  LZ4F_dctx *lz4f_dctx;
+  bool finished = false;
+  bool writing = false;
+  bool reading = false;
+  size_t readSize = 65536;
+  size_t srcOffset = 0;
+  size_t srcLength = 0;
+  std::vector<uint8_t> srcBuffer = {};
+};
 
-    };
-
-    class Lz4FileSystem : public FileSystem {
-        bool CanHandleFile(const string &fpath) override;
-	vector<OpenFileInfo> Glob(const string &path, FileOpener *opener) override;
-	bool FileExists(const string &filename, optional_ptr<FileOpener> opener = nullptr) override;
-	bool ListFiles(const string &directory, const std::function<void(const string &, bool)> &callback, FileOpener *opener) override;
-	void MoveFile(const string &source, const string &target, optional_ptr<FileOpener> opener = nullptr) override;
-	int64_t GetFileSize(FileHandle &handle) override;
-	bool OnDiskFile(FileHandle &handle) override {
-                return false;
-        }
-	string GetName() const override {
-	    return "Lz4FileSystem";
-	}
-	bool CanSeek() override {
-	    return false;
-	}
-	bool SupportsGlobExtended() const override {
-                return false;
-        }
-	unique_ptr<FileHandle> OpenFile(const string &path, FileOpenFlags flags,
-                                        optional_ptr<FileOpener> opener = nullptr) override;
-        int64_t Read(FileHandle &handle, void *buffer, int64_t nr_bytes) override;
-        int64_t Write(FileHandle &handle, void *buffer, int64_t nr_bytes) override;
-
-    };
-}
+class Lz4FileSystem : public FileSystem {
+  bool CanHandleFile(const string &fpath) override;
+  vector<OpenFileInfo> Glob(const string &path, FileOpener *opener) override;
+  bool FileExists(const string &filename,
+                  optional_ptr<FileOpener> opener = nullptr) override;
+  bool ListFiles(const string &directory,
+                 const std::function<void(const string &, bool)> &callback,
+                 FileOpener *opener) override;
+  void MoveFile(const string &source, const string &target,
+                optional_ptr<FileOpener> opener = nullptr) override;
+  int64_t GetFileSize(FileHandle &handle) override;
+  bool OnDiskFile(FileHandle &handle) override { return false; }
+  string GetName() const override { return "Lz4FileSystem"; }
+  bool CanSeek() override { return false; }
+  bool SupportsGlobExtended() const override { return false; }
+  unique_ptr<FileHandle>
+  OpenFile(const string &path, FileOpenFlags flags,
+           optional_ptr<FileOpener> opener = nullptr) override;
+  int64_t Read(FileHandle &handle, void *buffer, int64_t nr_bytes) override;
+  int64_t Write(FileHandle &handle, void *buffer, int64_t nr_bytes) override;
+};
+} // namespace duckdb

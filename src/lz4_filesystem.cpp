@@ -19,131 +19,150 @@
 
 namespace duckdb {
 
-    Lz4FileHandle::Lz4FileHandle(FileSystem &fs, const string &path, FileOpenFlags flags) : FileHandle(fs, path, flags) {
+Lz4FileHandle::Lz4FileHandle(FileSystem &fs, const string &path,
+                             FileOpenFlags flags)
+    : FileHandle(fs, path, flags) {
 
-	 int bzError;
-         if (flags.OpenForWriting()) {
-	     filePtr = fopen(path.c_str(), "wb");
-	     if (!filePtr) {
-	         throw IOException(strerror(errno));
-	     }
-	     LZ4F_createCompressionContext(&lz4f_cctx, LZ4F_VERSION);
-	     writing = true;
-	 } else if (flags.OpenForReading()) {
-	     filePtr = fopen(path.c_str(), "rb");
-	     if (!filePtr) {
-	         throw IOException(strerror(errno));
-	     }
-	     LZ4F_createDecompressionContext(&lz4f_dctx, LZ4F_VERSION);
-	     reading = true;
-	 } else {
-	     // XXX should check flags more thoroughly
-	     throw IOException("Unknown flags value");
-	 }
+  int bzError;
+  if (flags.OpenForWriting()) {
+    filePtr = fopen(path.c_str(), "wb");
+    if (!filePtr) {
+      throw IOException(strerror(errno));
     }
-
-    void Lz4FileHandle::Close() {
-	 LZ4F_freeCompressionContext(lz4f_cctx);
-	 LZ4F_freeDecompressionContext(lz4f_dctx);
-	 fclose(filePtr);
+    LZ4F_createCompressionContext(&lz4f_cctx, LZ4F_VERSION);
+    writing = true;
+  } else if (flags.OpenForReading()) {
+    filePtr = fopen(path.c_str(), "rb");
+    if (!filePtr) {
+      throw IOException(strerror(errno));
     }
-
-    bool Lz4FileSystem::CanHandleFile(const string &fpath) {
-	return StringUtil::EndsWith(fpath, ".lz4");
-    }
-
-    void Lz4FileSystem::MoveFile(const string &source, const string &target, optional_ptr<FileOpener> opener) {
-	rename(source.c_str(), target.c_str());
-    }
-
-    bool Lz4FileSystem::FileExists(const string &filename, optional_ptr<FileOpener> opener) {
-        if (!CanHandleFile(filename)) {
-                return false;
-        }
-	struct stat buffer;
-	return stat(filename.c_str(), &buffer) == 0;
-    }
-
-    vector<OpenFileInfo> Lz4FileSystem::Glob(const string &path, FileOpener *opener) {
-	if (FileExists(path)) return {OpenFileInfo(path)};
-	return {};
-    }
-
-    bool Lz4FileSystem::ListFiles(const string &directory, const std::function<void(const string &, bool)> &callback, FileOpener *opener) {
-	return false;
-    }
-
-    int64_t Lz4FileSystem::GetFileSize(FileHandle &handle) {
-	return 0;
-    }
-
-    unique_ptr<FileHandle> Lz4FileSystem::OpenFile(const string &path, FileOpenFlags flags, optional_ptr<FileOpener> opener) {
-	auto handle = make_uniq<Lz4FileHandle>(*this, path, flags);
-	return std::move(handle);
-    }
-
-    int64_t Lz4FileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes) {
-	auto &fh = handle.Cast<Lz4FileHandle>();
-
-	size_t dstSize;
-
-	// LZ4F_decompress *can* decode zero bytes sometimes, which duckdb will interpret as end of file,
-	// so this loop just calls it again until it does produce some bytes or we actually hit EOF.
-	while (!feof(fh.filePtr)) {
-	    if (fh.srcOffset >= fh.srcLength) {
-	        fh.srcBuffer.resize(fh.readSize);
-	        fh.srcLength = fread(fh.srcBuffer.data(), 1, fh.srcBuffer.size(), fh.filePtr);
-	        if (ferror(fh.filePtr)) throw IOException("read failed");
-	        if (fh.srcLength == 0) break;
-	        fh.srcOffset = 0;
-	    }
-    
-	    // srcSize and dstSize are both inputs (bytes to read / bytes to write) and outputs (bytes actually read / bytes written)
-	    // ret, if not an error and non zero, is a hint as to how big our next read should be.
-	    size_t srcSize = fh.srcLength - fh.srcOffset;
-	    size_t dstSize = nr_bytes;
-	    size_t ret = LZ4F_decompress(fh.lz4f_dctx, buffer, &dstSize, fh.srcBuffer.data() + fh.srcOffset, &srcSize, NULL);
-
-            if (LZ4F_isError(ret)) {
-                throw IOException(LZ4F_getErrorName(ret));
-	    } else if (ret > 0) {
-	        fh.readSize = ret;
-	    }
-	    fh.srcOffset += srcSize;
-	    if (dstSize > 0) return dstSize;
-	}
-	return 0;
-    }
-
-    int64_t Lz4FileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes) {
-	auto &fh = handle.Cast<Lz4FileHandle>();
-        const LZ4F_preferences_t *prefsPtr = NULL;
-	const LZ4F_compressOptions_t *cOptPtr = NULL;
-
-	const int64_t srcSizeMax = 8192;
-	std::vector<uint8_t>outBuffer(LZ4F_compressBound(srcSizeMax, prefsPtr));
-
-	size_t n = LZ4F_compressBegin(fh.lz4f_cctx, outBuffer.data(), outBuffer.size(), prefsPtr);
-        int m = fwrite(outBuffer.data(), 1, n, fh.filePtr);
-	if (n != m) throw IOException("Write Failed");
-
-        for (int64_t offset=0; offset < nr_bytes; offset += srcSizeMax) {	
-	    n = LZ4F_compressUpdate(
-			    fh.lz4f_cctx,
-			    outBuffer.data(),
-			    outBuffer.size(),
-			    (char *)buffer+offset,
-			    std::min(nr_bytes-offset, srcSizeMax),
-			    cOptPtr
-	    );
-            m = fwrite(outBuffer.data(), 1, n, fh.filePtr);
-	    if (n != m) throw IOException("Write Failed");
-	}
-
-	n = LZ4F_compressEnd(fh.lz4f_cctx, outBuffer.data(), outBuffer.size(), cOptPtr);
-        m = fwrite(outBuffer.data(), 1, n, fh.filePtr);
-	if (n != m) throw IOException("Write Failed");
-
-	return nr_bytes;
-    }
+    LZ4F_createDecompressionContext(&lz4f_dctx, LZ4F_VERSION);
+    reading = true;
+  } else {
+    // XXX should check flags more thoroughly
+    throw IOException("Unknown flags value");
+  }
 }
+
+void Lz4FileHandle::Close() {
+  LZ4F_freeCompressionContext(lz4f_cctx);
+  LZ4F_freeDecompressionContext(lz4f_dctx);
+  fclose(filePtr);
+}
+
+bool Lz4FileSystem::CanHandleFile(const string &fpath) {
+  return StringUtil::EndsWith(fpath, ".lz4");
+}
+
+void Lz4FileSystem::MoveFile(const string &source, const string &target,
+                             optional_ptr<FileOpener> opener) {
+  rename(source.c_str(), target.c_str());
+}
+
+bool Lz4FileSystem::FileExists(const string &filename,
+                               optional_ptr<FileOpener> opener) {
+  if (!CanHandleFile(filename)) {
+    return false;
+  }
+  struct stat buffer;
+  return stat(filename.c_str(), &buffer) == 0;
+}
+
+vector<OpenFileInfo> Lz4FileSystem::Glob(const string &path,
+                                         FileOpener *opener) {
+  if (FileExists(path))
+    return {OpenFileInfo(path)};
+  return {};
+}
+
+bool Lz4FileSystem::ListFiles(
+    const string &directory,
+    const std::function<void(const string &, bool)> &callback,
+    FileOpener *opener) {
+  return false;
+}
+
+int64_t Lz4FileSystem::GetFileSize(FileHandle &handle) { return 0; }
+
+unique_ptr<FileHandle>
+Lz4FileSystem::OpenFile(const string &path, FileOpenFlags flags,
+                        optional_ptr<FileOpener> opener) {
+  auto handle = make_uniq<Lz4FileHandle>(*this, path, flags);
+  return std::move(handle);
+}
+
+int64_t Lz4FileSystem::Read(FileHandle &handle, void *buffer,
+                            int64_t nr_bytes) {
+  auto &fh = handle.Cast<Lz4FileHandle>();
+
+  size_t dstSize;
+
+  // LZ4F_decompress *can* decode zero bytes sometimes, which duckdb will
+  // interpret as end of file, so this loop just calls it again until it does
+  // produce some bytes or we actually hit EOF.
+  while (!feof(fh.filePtr)) {
+    if (fh.srcOffset >= fh.srcLength) {
+      fh.srcBuffer.resize(fh.readSize);
+      fh.srcLength =
+          fread(fh.srcBuffer.data(), 1, fh.srcBuffer.size(), fh.filePtr);
+      if (ferror(fh.filePtr))
+        throw IOException("read failed");
+      if (fh.srcLength == 0)
+        break;
+      fh.srcOffset = 0;
+    }
+
+    // srcSize and dstSize are both inputs (bytes to read / bytes to write) and
+    // outputs (bytes actually read / bytes written) ret, if not an error and
+    // non zero, is a hint as to how big our next read should be.
+    size_t srcSize = fh.srcLength - fh.srcOffset;
+    size_t dstSize = nr_bytes;
+    size_t ret =
+        LZ4F_decompress(fh.lz4f_dctx, buffer, &dstSize,
+                        fh.srcBuffer.data() + fh.srcOffset, &srcSize, NULL);
+
+    if (LZ4F_isError(ret)) {
+      throw IOException(LZ4F_getErrorName(ret));
+    } else if (ret > 0) {
+      fh.readSize = ret;
+    }
+    fh.srcOffset += srcSize;
+    if (dstSize > 0)
+      return dstSize;
+  }
+  return 0;
+}
+
+int64_t Lz4FileSystem::Write(FileHandle &handle, void *buffer,
+                             int64_t nr_bytes) {
+  auto &fh = handle.Cast<Lz4FileHandle>();
+  const LZ4F_preferences_t *prefsPtr = NULL;
+  const LZ4F_compressOptions_t *cOptPtr = NULL;
+
+  const int64_t srcSizeMax = 8192;
+  std::vector<uint8_t> outBuffer(LZ4F_compressBound(srcSizeMax, prefsPtr));
+
+  size_t n = LZ4F_compressBegin(fh.lz4f_cctx, outBuffer.data(),
+                                outBuffer.size(), prefsPtr);
+  int m = fwrite(outBuffer.data(), 1, n, fh.filePtr);
+  if (n != m)
+    throw IOException("Write Failed");
+
+  for (int64_t offset = 0; offset < nr_bytes; offset += srcSizeMax) {
+    n = LZ4F_compressUpdate(fh.lz4f_cctx, outBuffer.data(), outBuffer.size(),
+                            (char *)buffer + offset,
+                            std::min(nr_bytes - offset, srcSizeMax), cOptPtr);
+    m = fwrite(outBuffer.data(), 1, n, fh.filePtr);
+    if (n != m)
+      throw IOException("Write Failed");
+  }
+
+  n = LZ4F_compressEnd(fh.lz4f_cctx, outBuffer.data(), outBuffer.size(),
+                       cOptPtr);
+  m = fwrite(outBuffer.data(), 1, n, fh.filePtr);
+  if (n != m)
+    throw IOException("Write Failed");
+
+  return nr_bytes;
+}
+} // namespace duckdb
